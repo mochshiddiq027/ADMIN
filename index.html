@@ -338,7 +338,7 @@ export default function App() {
                 {activeTab === 'settings' && 'Pengaturan & Database Supabase'}
               </h1>
               <p className="text-xs text-slate-500 hidden sm:block">
-                Sistem Operasional Rental Mobil • 1 Garage Terpusat
+                Sistem Operasional Rental Mobil � 1 Garage Terpusat
               </p>
             </div>
           </div>
@@ -774,7 +774,7 @@ function DashboardView({
                     <td className="p-3.5 pl-5 font-mono text-xs font-semibold text-slate-500">{v.vehicle_code}</td>
                     <td className="p-3.5 font-extrabold text-slate-900">{v.plate_number}</td>
                     <td className="p-3.5 font-medium">{v.brand} {v.model}</td>
-                    <td className="p-3.5 text-xs text-slate-500">{v.year} • {v.color}</td>
+                    <td className="p-3.5 text-xs text-slate-500">{v.year} � {v.color}</td>
                     <td className="p-3.5">
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
@@ -1182,7 +1182,7 @@ function VehiclesView({ vehicles, setVehicles, getCalculatedVehicleStatus, showT
                       <td className="p-3.5 pl-5 font-mono text-xs font-semibold text-slate-500">{v.vehicle_code}</td>
                       <td className="p-3.5 font-extrabold text-slate-900">{v.plate_number}</td>
                       <td className="p-3.5 font-semibold text-slate-800">{v.brand} {v.model}</td>
-                      <td className="p-3.5 text-xs text-slate-500">{v.year} • {v.color}</td>
+                      <td className="p-3.5 text-xs text-slate-500">{v.year} � {v.color}</td>
                       <td className="p-3.5">
                         <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
                           v.general_status === 'ACTIVE' ? 'bg-blue-100 text-blue-800' :
@@ -1333,7 +1333,7 @@ function VehiclesView({ vehicles, setVehicles, getCalculatedVehicleStatus, showT
               </div>
 
               <div className="p-3 bg-amber-50 rounded-xl text-[11px] text-amber-800 border border-amber-200">
-                ⚠️ Status ketersediaan sewa (Ready/Disewa/Booking) akan dihitung secara otomatis oleh sistem berdasarkan transaksi aktif.
+                ?? Status ketersediaan sewa (Ready/Disewa/Booking) akan dihitung secara otomatis oleh sistem berdasarkan transaksi aktif.
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
@@ -1802,7 +1802,7 @@ function RentalsView({
                       </td>
                       <td className="p-3.5 text-xs">
                         <span className="block font-medium text-slate-700">{r.pickup_method}</span>
-                        <span className="text-slate-400">→ {r.return_method}</span>
+                        <span className="text-slate-400">? {r.return_method}</span>
                       </td>
                       <td className="p-3.5">
                         <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold ${
@@ -2240,7 +2240,7 @@ CREATE POLICY "Allow authenticated admin access" ON public.rental_activities FOR
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
-            <span className="font-bold text-slate-900 block text-sm">🔑 Environment Variables (.env.local)</span>
+            <span className="font-bold text-slate-900 block text-sm">?? Environment Variables (.env.local)</span>
             <p className="text-slate-600">Simpan kredensial Supabase Anda di file local environment:</p>
             <pre className="p-2.5 bg-slate-900 text-slate-200 rounded-lg font-mono text-[11px] overflow-x-auto">
 {`NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
@@ -2249,7 +2249,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here`}
           </div>
 
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
-            <span className="font-bold text-slate-900 block text-sm">🚀 Deployment Workflow GitHub & Vercel</span>
+            <span className="font-bold text-slate-900 block text-sm">?? Deployment Workflow GitHub & Vercel</span>
             <ul className="list-disc pl-4 space-y-1 text-slate-600">
               <li>1. Push kode repository ke GitHub.</li>
               <li>2. Connect repository ke Vercel Dashboard.</li>
@@ -2337,7 +2337,7 @@ function LoginPage({ onLogin }) {
         </form>
 
         <div className="p-3 bg-slate-50 rounded-xl text-[11px] text-slate-500 text-center border border-slate-100">
-          💡 Gunakan kredensial demo default di atas untuk langsung masuk.
+          ?? Gunakan kredensial demo default di atas untuk langsung masuk.
         </div>
       </div>
     </div>
