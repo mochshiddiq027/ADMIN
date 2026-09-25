@@ -35,7 +35,33 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
 
-    // --- INLINE SVG ICON COMPONENTS (100% Reliable without external icon library issues) ---
+    // --- LOCAL STORAGE HELPER UTILITIES ---
+    const STORAGE_KEYS = {
+      VEHICLES: 'RENTAL_APP_VEHICLES_V2',
+      CUSTOMERS: 'RENTAL_APP_CUSTOMERS_V2',
+      RENTALS: 'RENTAL_APP_RENTALS_V2',
+      ACTIVITIES: 'RENTAL_APP_ACTIVITIES_V2'
+    };
+
+    const loadFromStorage = (key, fallback) => {
+      try {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : fallback;
+      } catch (e) {
+        console.error(`Error loading ${key} from localStorage:`, e);
+        return fallback;
+      }
+    };
+
+    const saveToStorage = (key, value) => {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (e) {
+        console.error(`Error saving ${key} to localStorage:`, e);
+      }
+    };
+
+    // --- INLINE SVG ICON COMPONENTS ---
     const IconCar = ({ className = "w-5 h-5" }) => (
       <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M8 17a2 2 0 100 4 2 2 0 000-4zm8 0a2 2 0 100 4 2 2 0 000-4zM3 9l2-4h10l2 4M3 9h18M3 9v7a1 1 0 001 1h16a1 1 0 001-1V9M5 13h2m10 0h2" />
@@ -182,7 +208,7 @@
       </svg>
     );
 
-    // Default Master Vehicles Seed Data (10 Vehicles)
+    // INITIAL SEED DATA
     const INITIAL_VEHICLES = [
       { id: 'v-1', vehicle_code: 'MOB-001', plate_number: 'B 1234 SJA', brand: 'Toyota', model: 'Avanza Grand New', year: 2022, color: 'Hitam', general_status: 'ACTIVE', notes: 'Servis rutin berkala aman.' },
       { id: 'v-2', vehicle_code: 'MOB-002', plate_number: 'B 5678 TPK', brand: 'Toyota', model: 'Innova Reborn Diesel', year: 2023, color: 'Putih Metalik', general_status: 'ACTIVE', notes: 'Favorit luar kota.' },
@@ -196,7 +222,6 @@
       { id: 'v-10', vehicle_code: 'MOB-010', plate_number: 'B 2468 BBB', brand: 'Honda', model: 'Brio RS Auto', year: 2021, color: 'Kuning', general_status: 'INACTIVE', notes: 'Cadangan / surat masih diproses.' },
     ];
 
-    // Default Seed Data for 10 Customers
     const INITIAL_CUSTOMERS = [
       { id: 'c-1', name: 'Budi Santoso', phone: '081234567890', address: 'Jl. Sudirman No. 45, Jakarta Selatan', notes: 'Pelanggan tetap corporate.' },
       { id: 'c-2', name: 'Siti Rahmawati', phone: '081987654321', address: 'Griya Asri Blok C2 No. 10, Tangerang', notes: 'Pembayaran selalu tepat waktu.' },
@@ -228,7 +253,6 @@
       return d.toISOString().split('T')[0];
     };
 
-    // Generating initial realistic rentals for operational testing
     const generateInitialRentals = () => {
       const today = getFormattedToday();
       const yesterday = addDays(today, -1);
@@ -356,18 +380,58 @@
       const [user, setUser] = useState({ name: 'Admin Rental', role: 'ADMIN', email: 'admin@rental.com' });
       const [isLoggedIn, setIsLoggedIn] = useState(true);
 
-      // Core Data States
-      const [vehicles, setVehicles] = useState(INITIAL_VEHICLES);
-      const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
-      const [rentals, setRentals] = useState(() => generateInitialRentals());
-      const [activities, setActivities] = useState(() => generateInitialActivities(generateInitialRentals()));
+      // Core Persistent Data States (Stored in localStorage)
+      const [vehicles, setVehicles] = useState(() => loadFromStorage(STORAGE_KEYS.VEHICLES, INITIAL_VEHICLES));
+      const [customers, setCustomers] = useState(() => loadFromStorage(STORAGE_KEYS.CUSTOMERS, INITIAL_CUSTOMERS));
+      const [rentals, setRentals] = useState(() => loadFromStorage(STORAGE_KEYS.RENTALS, generateInitialRentals()));
+      const [activities, setActivities] = useState(() => loadFromStorage(STORAGE_KEYS.ACTIVITIES, generateInitialActivities(generateInitialRentals())));
 
       // Toast Notification state
       const [toast, setToast] = useState(null);
 
+      // Custom Modal Confirmation state for Deleting Vehicles / Resetting Data
+      const [confirmModal, setConfirmModal] = useState(null);
+
+      // Automatic localStorage Synchronization
+      useEffect(() => {
+        saveToStorage(STORAGE_KEYS.VEHICLES, vehicles);
+      }, [vehicles]);
+
+      useEffect(() => {
+        saveToStorage(STORAGE_KEYS.CUSTOMERS, customers);
+      }, [customers]);
+
+      useEffect(() => {
+        saveToStorage(STORAGE_KEYS.RENTALS, rentals);
+      }, [rentals]);
+
+      useEffect(() => {
+        saveToStorage(STORAGE_KEYS.ACTIVITIES, activities);
+      }, [activities]);
+
       const showToast = (message, type = 'success') => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 4000);
+      };
+
+      // Reset to original demo seed data
+      const handleResetDemoData = () => {
+        setConfirmModal({
+          title: 'Reset Ke Data Demo Bawaan?',
+          message: 'Semua perubahan data (tambah/edit/hapus) yang telah disimulasikan akan dikembalikan ke data awal demo.',
+          confirmText: 'Ya, Reset Data',
+          confirmStyle: 'bg-rose-600 hover:bg-rose-700 text-white',
+          onConfirm: () => {
+            const defaultRentals = generateInitialRentals();
+            const defaultActivities = generateInitialActivities(defaultRentals);
+            setVehicles(INITIAL_VEHICLES);
+            setCustomers(INITIAL_CUSTOMERS);
+            setRentals(defaultRentals);
+            setActivities(defaultActivities);
+            showToast('Data berhasil dikembalikan ke data demo awal.');
+            setConfirmModal(null);
+          }
+        });
       };
 
       // BUSINESS RULE: Dynamically calculate vehicle status based on transaction date overlap
@@ -414,7 +478,6 @@
           const existingStart = new Date(`${r.pickup_date}T${r.pickup_time}`).getTime();
           const existingEnd = new Date(`${r.return_date}T${r.return_time}`).getTime();
 
-          // Overlap formula: startA < endB && endA > startB
           return newStart < existingEnd && newEnd > existingStart;
         });
 
@@ -446,6 +509,30 @@
               <button onClick={() => setToast(null)} className="ml-2 text-slate-400 hover:text-slate-600">
                 <IconX className="w-4 h-4" />
               </button>
+            </div>
+          )}
+
+          {/* Confirmation Modal */}
+          {confirmModal && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+                <h3 className="text-lg font-bold text-slate-900 mb-2">{confirmModal.title}</h3>
+                <p className="text-sm text-slate-600 mb-6 leading-relaxed">{confirmModal.message}</p>
+                <div className="flex justify-end gap-2.5">
+                  <button
+                    onClick={() => setConfirmModal(null)}
+                    className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={confirmModal.onConfirm}
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${confirmModal.confirmStyle || 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+                  >
+                    {confirmModal.confirmText || 'Konfirmasi'}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -486,6 +573,15 @@
               </div>
 
               <div className="flex items-center gap-3">
+                <button
+                  onClick={handleResetDemoData}
+                  className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-all"
+                  title="Kembalikan data ke kondisi awal demo"
+                >
+                  <IconRefresh className="w-3.5 h-3.5" />
+                  <span>Reset Data Demo</span>
+                </button>
+
                 <div className="hidden sm:flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-700">
                   <span className="w-2 h-2 rounded-full bg-blue-600"></span>
                   <span>Garasi Utama (Pusat)</span>
@@ -524,8 +620,10 @@
                 <VehiclesView 
                   vehicles={vehicles} 
                   setVehicles={setVehicles} 
+                  rentals={rentals}
                   getCalculatedVehicleStatus={getCalculatedVehicleStatus}
                   showToast={showToast}
+                  setConfirmModal={setConfirmModal}
                 />
               )}
 
@@ -535,6 +633,7 @@
                   setCustomers={setCustomers} 
                   rentals={rentals}
                   showToast={showToast}
+                  setConfirmModal={setConfirmModal}
                 />
               )}
 
@@ -548,6 +647,7 @@
                   setActivities={setActivities}
                   checkDoubleBooking={checkDoubleBooking}
                   showToast={showToast}
+                  setConfirmModal={setConfirmModal}
                 />
               )}
 
@@ -564,6 +664,7 @@
                   vehicles={vehicles}
                   customers={customers}
                   rentals={rentals}
+                  handleResetDemoData={handleResetDemoData}
                 />
               )}
             </main>
@@ -589,7 +690,6 @@
 
       return (
         <>
-          {/* Mobile Drawer Backdrop */}
           {isMobileOpen && (
             <div 
               className="fixed inset-0 bg-slate-900/50 z-30 md:hidden backdrop-blur-xs"
@@ -597,7 +697,6 @@
             />
           )}
 
-          {/* Sidebar Body */}
           <aside className={`
             fixed md:static inset-y-0 left-0 z-40
             w-64 bg-slate-900 text-slate-300 flex flex-col justify-between
@@ -605,7 +704,6 @@
             ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           `}>
             <div>
-              {/* Brand Header */}
               <div className="p-5 border-b border-slate-800 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xl shadow-md">
@@ -624,7 +722,6 @@
                 </button>
               </div>
 
-              {/* Navigation Links */}
               <nav className="p-3 space-y-1">
                 {menuItems.map((item) => {
                   const Icon = item.icon;
@@ -648,12 +745,11 @@
               </nav>
             </div>
 
-            {/* Footer Actions */}
             <div className="p-4 border-t border-slate-800">
               <div className="bg-slate-800/60 rounded-xl p-3 mb-3 text-xs">
                 <div className="flex items-center gap-2 text-emerald-400 font-semibold mb-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  Garage Online
+                  Storage: Local (Tersimpan)
                 </div>
                 <p className="text-slate-400">1 Garage Terpusat</p>
               </div>
@@ -757,7 +853,6 @@
 
       return (
         <div className="space-y-6">
-          {/* Date Filter Bar */}
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
@@ -803,7 +898,6 @@
             </div>
           </div>
 
-          {/* Cards Grid Summary */}
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 md:gap-4">
             <StatCard title="Mobil Aktif" value={activeVehiclesCount} subtitle="Total armada siap guna" icon={IconCar} color="blue" />
             <StatCard title="Mobil Ready" value={readyCount} subtitle={`Tersedia pada ${selectedDate}`} icon={IconCheck} color="emerald" />
@@ -1082,7 +1176,7 @@
       );
     }
 
-    function VehiclesView({ vehicles, setVehicles, getCalculatedVehicleStatus, showToast }) {
+    function VehiclesView({ vehicles, setVehicles, rentals, getCalculatedVehicleStatus, showToast, setConfirmModal }) {
       const [searchTerm, setSearchTerm] = useState('');
       const [filterStatus, setFilterStatus] = useState('ALL');
       const [isModalOpen, setIsModalOpen] = useState(false);
@@ -1168,16 +1262,45 @@
         setIsModalOpen(false);
       };
 
-      const handleSoftDelete = (vehicleId) => {
-        if (window.confirm('Apakah Anda yakin ingin menonaktifkan mobil ini? (Soft Delete)')) {
-          setVehicles(prev => prev.map(v => v.id === vehicleId ? { ...v, general_status: 'INACTIVE' } : v));
-          showToast('Status mobil diubah menjadi NONAKTIF.');
+      // SOFT DELETE (Nonaktifkan)
+      const handleSoftDelete = (vehicle) => {
+        setConfirmModal({
+          title: `Nonaktifkan Mobil ${vehicle.plate_number}?`,
+          message: `Mobil (${vehicle.brand} ${vehicle.model}) akan diubah status masternya menjadi NONAKTIF dan tidak dapat dibooking.`,
+          confirmText: 'Ya, Nonaktifkan',
+          confirmStyle: 'bg-amber-600 hover:bg-amber-700 text-white',
+          onConfirm: () => {
+            setVehicles(prev => prev.map(v => v.id === vehicle.id ? { ...v, general_status: 'INACTIVE' } : v));
+            showToast(`Status mobil ${vehicle.plate_number} diubah menjadi NONAKTIF.`);
+            setConfirmModal(null);
+          }
+        });
+      };
+
+      // PERMANENT DELETE
+      const handlePermanentDelete = (vehicle) => {
+        // Check if vehicle has active transactions
+        const hasActiveRental = rentals.some(r => r.vehicle_id === vehicle.id && r.status !== 'COMPLETED' && r.status !== 'CANCELLED');
+        if (hasActiveRental) {
+          showToast(`Tidak bisa menghapus mobil ${vehicle.plate_number} karena masih memiliki transaksi booking/sewa aktif!`, 'error');
+          return;
         }
+
+        setConfirmModal({
+          title: `Hapus Permanen Mobil ${vehicle.plate_number}?`,
+          message: `PERINGATAN: Mobil (${vehicle.brand} ${vehicle.model}) akan dihapus secara permanen dari daftar master mobil!`,
+          confirmText: 'Hapus Permanen',
+          confirmStyle: 'bg-rose-600 hover:bg-rose-700 text-white',
+          onConfirm: () => {
+            setVehicles(prev => prev.filter(v => v.id !== vehicle.id));
+            showToast(`Mobil ${vehicle.plate_number} telah dihapus permanen.`);
+            setConfirmModal(null);
+          }
+        });
       };
 
       return (
         <div className="space-y-5">
-          {/* Action Header */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
             <div className="flex flex-col sm:flex-row items-center gap-3 flex-1">
               <div className="relative w-full sm:w-72">
@@ -1215,7 +1338,6 @@
             </button>
           </div>
 
-          {/* Table Container */}
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -1278,10 +1400,21 @@
                               >
                                 <IconEdit className="w-4 h-4" />
                               </button>
+                              
+                              {v.general_status === 'ACTIVE' && (
+                                <button
+                                  onClick={() => handleSoftDelete(v)}
+                                  className="p-1.5 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+                                  title="Nonaktifkan Mobil"
+                                >
+                                  <IconAlert className="w-4 h-4" />
+                                </button>
+                              )}
+
                               <button
-                                onClick={() => handleSoftDelete(v.id)}
+                                onClick={() => handlePermanentDelete(v)}
                                 className="p-1.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                                title="Nonaktifkan Mobil"
+                                title="Hapus Permanen"
                               >
                                 <IconTrash className="w-4 h-4" />
                               </button>
@@ -1296,7 +1429,6 @@
             </div>
           </div>
 
-          {/* Modal Form */}
           {isModalOpen && (
             <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
               <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200">
@@ -1397,10 +1529,6 @@
                     ></textarea>
                   </div>
 
-                  <div className="p-3 bg-amber-50 rounded-xl text-[11px] text-amber-800 border border-amber-200">
-                    ⚠️ Status ketersediaan sewa (Ready/Disewa/Booking) dihitung otomatis oleh sistem berdasarkan transaksi aktif.
-                  </div>
-
                   <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                     <button
                       type="button"
@@ -1424,7 +1552,7 @@
       );
     }
 
-    function CustomersView({ customers, setCustomers, rentals, showToast }) {
+    function CustomersView({ customers, setCustomers, rentals, showToast, setConfirmModal }) {
       const [searchTerm, setSearchTerm] = useState('');
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [editingCustomer, setEditingCustomer] = useState(null);
@@ -1478,6 +1606,26 @@
         }
 
         setIsModalOpen(false);
+      };
+
+      const handleDeleteCustomer = (customer) => {
+        const hasRentals = rentals.some(r => r.customer_id === customer.id);
+        if (hasRentals) {
+          showToast(`Customer ${customer.name} tidak bisa dihapus karena memiliki riwayat/booking transaksi sewa.`, 'error');
+          return;
+        }
+
+        setConfirmModal({
+          title: `Hapus Customer ${customer.name}?`,
+          message: `Data customer ${customer.name} (${customer.phone}) akan dihapus secara permanen.`,
+          confirmText: 'Ya, Hapus Customer',
+          confirmStyle: 'bg-rose-600 hover:bg-rose-700 text-white',
+          onConfirm: () => {
+            setCustomers(prev => prev.filter(c => c.id !== customer.id));
+            showToast(`Customer ${customer.name} berhasil dihapus.`);
+            setConfirmModal(null);
+          }
+        });
       };
 
       return (
@@ -1548,6 +1696,13 @@
                       >
                         <IconEdit className="w-3.5 h-3.5" />
                         Edit Data
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCustomer(c)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                        title="Hapus Customer"
+                      >
+                        <IconTrash className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -1646,7 +1801,8 @@
       activities, 
       setActivities, 
       checkDoubleBooking, 
-      showToast 
+      showToast,
+      setConfirmModal
     }) {
       const [searchTerm, setSearchTerm] = useState('');
       const [statusFilter, setStatusFilter] = useState('ALL');
@@ -1704,7 +1860,6 @@
           return;
         }
 
-        // MANDATORY ADDRESS VALIDATION FOR DELIVERY / DRIVER PICKUP
         if (formData.pickup_method === 'DELIVERY' || formData.return_method === 'DRIVER_PICKUP') {
           if (!formData.operational_address.trim()) {
             showToast('Alamat wajib diisi jika memilih Delivery / Driver Pickup!', 'error');
@@ -1712,7 +1867,6 @@
           }
         }
 
-        // DOUBLE BOOKING OVERLAP VALIDATION
         const validation = checkDoubleBooking(
           formData.vehicle_id,
           formData.pickup_date,
@@ -1763,16 +1917,23 @@
         setRentals(prev => [newRental, ...prev]);
         setActivities(prev => [...prev, pickupActivity, returnActivity]);
 
-        showToast(`Booking ${newRentalCode} berhasil disimpan. Tervalidasi bebas overlap!`);
+        showToast(`Booking ${newRentalCode} berhasil disimpan & tervalidasi bebas overlap!`);
         setIsModalOpen(false);
       };
 
-      const handleCancelRental = (rentalId) => {
-        if (window.confirm('Apakah Anda yakin ingin membatalkan booking sewa ini?')) {
-          setRentals(prev => prev.map(r => r.id === rentalId ? { ...r, status: 'CANCELLED' } : r));
-          setActivities(prev => prev.map(a => a.rental_id === rentalId ? { ...a, status: 'CANCELLED' } : a));
-          showToast('Transaksi booking telah dibatalkan.');
-        }
+      const handleCancelRental = (rental) => {
+        setConfirmModal({
+          title: `Batalkan Booking ${rental.rental_code}?`,
+          message: `Transaksi booking untuk customer ini akan diubah statusnya menjadi CANCELLED dan jadwal operasionalnya akan dihapus.`,
+          confirmText: 'Ya, Batalkan Booking',
+          confirmStyle: 'bg-rose-600 hover:bg-rose-700 text-white',
+          onConfirm: () => {
+            setRentals(prev => prev.map(r => r.id === rental.id ? { ...r, status: 'CANCELLED' } : r));
+            setActivities(prev => prev.map(a => a.rental_id === rental.id ? { ...a, status: 'CANCELLED' } : a));
+            showToast(`Transaksi ${rental.rental_code} telah dibatalkan.`);
+            setConfirmModal(null);
+          }
+        });
       };
 
       return (
@@ -1874,7 +2035,7 @@
                           <td className="p-3.5 text-right pr-5">
                             {r.status !== 'COMPLETED' && r.status !== 'CANCELLED' && (
                               <button
-                                onClick={() => handleCancelRental(r.id)}
+                                onClick={() => handleCancelRental(r)}
                                 className="px-2.5 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
                               >
                                 Batalkan
@@ -1890,7 +2051,6 @@
             </div>
           </div>
 
-          {/* Modal Form New Rental */}
           {isModalOpen && (
             <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
               <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto">
@@ -1935,7 +2095,6 @@
                     </div>
                   </div>
 
-                  {/* Pickup Config */}
                   <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100 space-y-3">
                     <span className="text-xs font-bold text-blue-900 block">Jadwal Pengambilan</span>
                     <div className="grid grid-cols-2 gap-3">
@@ -1988,7 +2147,6 @@
                     </div>
                   </div>
 
-                  {/* Return Config */}
                   <div className="p-3 bg-rose-50/50 rounded-xl border border-rose-100 space-y-3">
                     <span className="text-xs font-bold text-rose-900 block">Jadwal Pengembalian</span>
                     <div className="grid grid-cols-2 gap-3">
@@ -2194,7 +2352,7 @@
       );
     }
 
-    function SettingsView() {
+    function SettingsView({ handleResetDemoData }) {
       const [copied, setCopied] = useState(false);
 
       const supabaseSQLMigration = `-- ================================================
@@ -2287,20 +2445,30 @@ CREATE POLICY "Allow authenticated admin access" ON public.rental_activities FOR
       return (
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                <IconDatabase className="w-5 h-5" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                  <IconDatabase className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">Penyimpanan & Database Supabase</h3>
+                  <p className="text-xs text-slate-500">Perubahan data aplikasi saat ini disimpan secara permanen di Browser Local Storage.</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-slate-900 text-base">Panduan Database Supabase PostgreSQL</h3>
-                <p className="text-xs text-slate-500">Skema database ini telah disesuaikan dengan aturan bisnis operasional rental.</p>
-              </div>
+
+              <button
+                onClick={handleResetDemoData}
+                className="px-3.5 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all flex items-center gap-1.5"
+              >
+                <IconRefresh className="w-4 h-4" />
+                <span>Reset Ke Data Demo</span>
+              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
                 <span className="font-bold text-slate-900 block text-sm">🔑 Environment Variables (.env.local)</span>
-                <p className="text-slate-600">Simpan kredensial Supabase Anda di file lokal:</p>
+                <p className="text-slate-600">Simpan kredensial Supabase Anda di file lokal saat mengintegrasikan backend:</p>
                 <pre className="p-2.5 bg-slate-900 text-slate-200 rounded-lg font-mono text-[11px] overflow-x-auto">
 {`NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here`}
@@ -2394,7 +2562,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here`}
             </form>
 
             <div className="p-3 bg-slate-50 rounded-xl text-[11px] text-slate-500 text-center border border-slate-100">
-              💡 Gunakan kredensial demo default di atas untuk langsung masuk.
+              💡 Klik tombol masuk untuk langsung menggunakan aplikasi demo.
             </div>
           </div>
         </div>
